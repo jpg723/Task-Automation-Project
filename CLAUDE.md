@@ -1,20 +1,57 @@
+@AGENTS.md
+
 # Task Automation Project
 
-Jira 이슈 데이터를 기반으로 일/주/월 단위 이슈 현황을 시각화하는 대시보드와, 결과 리포트를 자동으로 생성/발송하는 업무 자동화 서비스.
+Jira 프로젝트 링크를 등록해두면 일/주/월 단위로 전 기간 대비 이슈 상태 변화를 자동으로 집계해 보여주고, 리포트를 생성/발송하는 개인용 업무 자동화 서비스.
+
+자세한 목적/요구사항/기능 명세는 [docs/requirements.md](docs/requirements.md) 참고.
 
 ## 목표
 
-- Jira API(또는 Jira 링크)와 연동하여 이슈 데이터를 수집
-- 일별 / 주별 / 월별 단위로 이슈 현황을 집계하는 대시보드 제공
-- 집계 결과를 바탕으로 보고서를 자동 생성 (예: 슬랙/이메일 등으로 발송)
+- Jira Cloud API와 연동하여 여러 프로젝트의 이슈 데이터를 수집
+- 일별 / 주별 / 월별 단위로 전 기간 대비 이슈 상태 변화(diff)를 집계하는 대시보드 제공
+- 집계 결과를 바탕으로 리포트를 자동 생성하여 MS Teams로 발송
 
-## 주요 기능 (예정)
+## 주요 기능
 
-- Jira 이슈 연동: 프로젝트/이슈 키, 상태, 담당자, 마감일 등 조회
-- 대시보드: 기간별 이슈 처리 현황, 지연/완료 통계 시각화
-- 자동 보고: 정해진 주기(일/주/월)로 리포트 생성 및 자동 발송
+- 프로젝트 관리: 여러 Jira 프로젝트를 등록/수정/삭제하여 지속적으로 추적 (실제 Postgres DB에 저장, API 토큰은 AES-256-GCM 암호화)
+- 이슈 데이터 수집: 등록된 프로젝트 카드의 '지금 동기화' 버튼으로 Jira REST API를 호출해 이슈를 가져와 스냅샷으로 저장 (수동 트리거만 구현, 자동 스케줄링은 미구현)
+- 변경 사항 추적(Diff): 두 스냅샷을 비교해 신규/완료/상태 변경/삭제(필터 이탈)/마감 지연 이슈를 계산
+- 대시보드: 기간별(일/주/월) 이슈 처리 현황, 상태 분포, 처리 추이, 변경 내역을 실제 DB 데이터로 표시
+- 자동 보고: 정해진 주기(일/주/월)로 리포트 생성 및 MS Teams 자동 발송 (미구현)
+
+## 전제 조건 (확정)
+
+- Jira 종류: Jira Cloud (API Token + Email 인증)
+- 사용 범위: 개인용 (멀티유저/권한 분리 없음)
+- 리포트 채널: 대시보드 내 확인 + MS Teams
+
+## 기술 스택
+
+- Frontend: Next.js (App Router) + TypeScript + Tailwind CSS v4 + shadcn/ui
+- 차트: Recharts (Tailwind v4는 CSS 기반 설정이라 Tremor의 tailwind.config 기반 테마와 궁합이 안 맞아 Recharts로 결정)
+- 데이터 페칭/캐싱: TanStack Query
+- Backend: Next.js Route Handlers (풀스택 단일 프로젝트)
+- ORM: Prisma 7 (driver adapter 방식 — `@prisma/adapter-pg` + `pg` 필요, `PrismaClient`는 반드시 adapter와 함께 생성)
+- DB: PostgreSQL (Neon 또는 Supabase — 서버리스 배포에 적합)
+- 스케줄링: Vercel Cron (일 단위 스냅샷 수집)
+- 인증: 개인용 간단 비밀번호 세션 인증 (배포 시 외부 노출 방지 목적)
+- 배포: Vercel
+- 외부 연동: Jira REST API v3, MS Teams Incoming Webhook (Adaptive Cards)
 
 ## 현재 상태
 
-- 초기 단계 (README만 존재)
-- 기술 스택, 아키텍처, Jira 연동 방식은 추후 결정 예정
+- 요구사항 명세 완료 ([docs/requirements.md](docs/requirements.md))
+- 로컬 개발용 DB: Postgres.app(PG17)을 `/Applications/Postgres.app`에 설치해 `localhost:5432`에서 실행 중 (데이터 디렉터리 `~/Library/Application Support/Postgres/var-17`). 최초 마이그레이션(`prisma/migrations/20260803080419_init`) 적용 완료, `prisma/seed.ts`로 `AppSetting` 싱글톤 row 시드.
+- **DB 연동 완료** — 프로젝트 CRUD, Jira 스냅샷 수집, 대시보드 diff가 모두 실제 Postgres에 연결되어 동작:
+  - `src/app/api/projects/route.ts`, `src/app/api/projects/[id]/route.ts`: 프로젝트 등록/수정/삭제. 등록·인증정보 변경 시 `src/lib/jira.ts`의 `verifyConnection()`으로 실제 Jira 인증 확인 후 `src/lib/crypto.ts`로 토큰 암호화 저장, 응답에는 `apiTokenEnc` 절대 미포함
+  - `src/app/api/projects/[id]/sync/route.ts` + `src/lib/snapshot-service.ts`: '지금 동기화' 버튼 → Jira에서 이슈 조회 → `Snapshot`/`IssueSnapshot` 저장 (실패 시 `FAILED` 상태 + `errorMessage` 기록, 기존 데이터는 보존)
+  - `src/lib/diff.ts` + `src/app/api/dashboard/route.ts`: 두 스냅샷 비교로 신규/완료/상태변경/삭제/지연 계산, 상태 분포·처리 추이 집계
+  - 프론트엔드는 TanStack Query(`src/hooks/use-projects.ts`, `src/hooks/use-dashboard.ts`)로 위 API를 호출 — `/`, `/projects` 페이지 모두 mock 데이터 제거 완료 (`src/lib/mock-data.ts` 삭제됨)
+  - 차트 색상은 dataviz 스킬의 검증된 팔레트를 `globals.css`에 CSS 변수로 이식해서 사용 (`--chart-1`~`--chart-8`, `--status-*`)
+- 아직 없음: 인증(비밀번호 세션), Vercel Cron 자동 스케줄링(현재는 수동 동기화만), Teams 발송 로직, 프로젝트 등록 폼의 색상 태그/커스텀 JQL 입력 UI
+
+## 개발 규칙
+
+- **새로운 기능이 추가되거나 기존 기능의 범위가 변경될 때마다 이 CLAUDE.md 파일의 "주요 기능"과 "현재 상태" 섹션을 함께 업데이트한다.** 코드와 문서가 어긋나지 않도록 기능 변경과 문서 갱신을 같은 작업 단위로 취급한다.
+- 기능 단위의 상세 요구사항은 `docs/requirements.md`에도 함께 반영한다.

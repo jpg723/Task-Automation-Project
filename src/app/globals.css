@@ -1,0 +1,176 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-pretendard), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #f6f6f7;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #5b8fdb;
+  --primary-foreground: #ffffff;
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: #0a0a0a;
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: #5c5c60;
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: #0a0a0a;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: rgba(10, 10, 10, 0.09);
+  --input: rgba(10, 10, 10, 0.12);
+  --ring: #5b8fdb;
+  --radius: 0.75rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: #5b8fdb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: #5b8fdb;
+
+  /* dataviz categorical palette (fixed order — never cycle; currently unused —
+     dashboard charts use the pastel sequential ramp + status colors below) */
+  --chart-1: #5b8fdb;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
+  --chart-7: #4a3aa7;
+  --chart-8: #e34948;
+
+  /* pastel sequential blue ramp, for ordinal series (workflow stages, tiers) —
+     one hue light→dark instead of unrelated categorical hues side by side */
+  --seq-light: #bcd6f2; /* soft pastel */
+  --seq-mid: #8fb6e8; /* mid pastel */
+  --seq-dark: #5b8fdb; /* same as primary */
+
+  /* pastel status accents (still legible as text, softer than a full-saturation alert palette) */
+  --status-good: #4caf7d;
+  --status-warning: #e8a94d;
+  --status-serious: #e2977a;
+  --status-critical: #d9655f;
+
+  /* extra pastel accent for KPI tile variety (violet, alongside the blue/green/peach already above) */
+  --tint-violet: #7c6fe0;
+
+  /* chart chrome — neutral, matches card surface */
+  --chart-surface: #ffffff;
+  --chart-grid: #e7e7e9;
+  --chart-axis: #c8c8cb;
+}
+
+.dark {
+  --background: #0b0b0c;
+  --foreground: #ffffff;
+  --card: #1a1a1c;
+  --card-foreground: #ffffff;
+  --popover: #1a1a1c;
+  --popover-foreground: #ffffff;
+  --primary: #6fa0e6;
+  --primary-foreground: #0a0a0a;
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: #ffffff;
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: #b9b9bd;
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: #ffffff;
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: #6fa0e6;
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: #6fa0e6;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: #6fa0e6;
+
+  --chart-1: #6fa0e6;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #008300;
+  --chart-7: #9085e9;
+  --chart-8: #e66767;
+
+  --seq-light: #a9c8ee; /* soft pastel */
+  --seq-mid: #82aee6; /* mid pastel */
+  --seq-dark: #6fa0e6; /* same as primary */
+
+  --status-good: #5fc090;
+  --status-warning: #f0bd6e;
+  --status-serious: #eda184;
+  --status-critical: #e2857f;
+
+  --tint-violet: #a597f0;
+
+  --chart-surface: #1a1a1c;
+  --chart-grid: #2c2c2f;
+  --chart-axis: #3d3d40;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

@@ -1,0 +1,112 @@
+// Prisma schema for the Jira issue tracker.
+// See docs/requirements.md for the feature spec this models.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ReportFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum SnapshotStatus {
+  SUCCESS
+  FAILED
+}
+
+/// A tracked Jira Cloud project. One row per registered project link.
+model Project {
+  id       String  @id @default(cuid())
+  name     String // display name shown in the UI
+  colorTag String? // hex color for dashboard badges
+  isActive Boolean @default(true) // pause tracking without deleting history
+
+  // Jira Cloud connection details
+  siteUrl     String // e.g. https://your-domain.atlassian.net
+  projectKey  String // e.g. "PROJ"
+  email       String // Jira account email used for basic auth
+  apiTokenEnc String // AES-256-GCM encrypted API token, see src/lib/crypto.ts
+  jql         String? // optional custom JQL filter; falls back to `project = <projectKey>`
+
+  // Reporting
+  reportEnabled   Boolean         @default(true)
+  reportFrequency ReportFrequency @default(DAILY)
+  teamsWebhookUrl String? // per-project override of AppSetting.defaultTeamsWebhookUrl
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  snapshots Snapshot[]
+  reports   Report[]
+
+  @@unique([siteUrl, projectKey])
+}
+
+/// One issue-collection run for a project, taken on a schedule (default: daily).
+/// Diffs between two Snapshots (by capturedAt) are computed on read, not stored.
+model Snapshot {
+  id           String         @id @default(cuid())
+  projectId    String
+  project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  capturedAt   DateTime       @default(now())
+  status       SnapshotStatus @default(SUCCESS)
+  errorMessage String?
+  issueCount   Int            @default(0)
+
+  issues IssueSnapshot[]
+
+  @@index([projectId, capturedAt])
+}
+
+/// The state of a single Jira issue as of one Snapshot.
+model IssueSnapshot {
+  id         String   @id @default(cuid())
+  snapshotId String
+  snapshot   Snapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  issueKey       String // e.g. "PROJ-123"
+  summary        String
+  status         String // Jira status name, e.g. "In Progress"
+  statusCategory String // Jira status category: "todo" | "in_progress" | "done"
+  issueType      String
+  priority       String?
+  assignee       String?
+  dueDate        DateTime?
+  labels         String[]
+
+  jiraCreatedAt DateTime
+  jiraUpdatedAt DateTime
+
+  @@index([snapshotId, issueKey])
+}
+
+/// A generated diff report for one period (day/week/month), kept for history
+/// and to avoid re-sending the same report if a cron run retries.
+model Report {
+  id          String          @id @default(cuid())
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  period      ReportFrequency
+  periodStart DateTime
+  periodEnd   DateTime
+  summary     Json // computed diff summary (new/done/status-changed/overdue issue lists)
+  sentToTeams Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+
+  @@unique([projectId, period, periodStart])
+}
+
+/// Single-row table of app-wide settings (this is a personal, single-user service).
+model AppSetting {
+  id                     String  @id @default("singleton")
+  defaultTeamsWebhookUrl String?
+  reportHourUtc          Int     @default(0) // hour of day (UTC) the daily cron runs
+  dashboardPasswordHash  String?
+}
