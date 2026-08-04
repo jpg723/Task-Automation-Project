@@ -2,7 +2,10 @@ name: Hourly Jira sync
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    # Avoid :00 — GitHub Actions scheduled runs queue up heavily right at the
+    # top of the hour and can be delayed or dropped; an off-the-hour minute
+    # (:17) runs far more reliably.
+    - cron: "17 * * * *"
   workflow_dispatch: {}
 
 jobs:
