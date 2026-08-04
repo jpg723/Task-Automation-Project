@@ -4,11 +4,12 @@ interface StatTileProps {
   label: string;
   value: number;
   icon: LucideIcon;
-  tint?: "blue" | "violet" | "green" | "peach";
+  tint?: "gray" | "blue" | "violet" | "green" | "peach";
   hint?: string;
 }
 
 const TINT_VAR: Record<NonNullable<StatTileProps["tint"]>, string> = {
+  gray: "--muted-foreground",
   blue: "--seq-dark",
   violet: "--tint-violet",
   green: "--status-good",

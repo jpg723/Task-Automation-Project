@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { SnapshotStatus } from "@/generated/prisma/enums";
 import type { IssueSnapshot, Snapshot } from "@/generated/prisma/client";
 import type { Period } from "@/lib/constants";
-import type { DashboardData, IssueChange, StatusSlice, TrendPoint } from "@/lib/dashboard-types";
+import type { DashboardData, IssueChange, IssueListItem, StatusSlice, TrendPoint } from "@/lib/dashboard-types";
 
 const PERIOD_MS: Record<Period, number> = {
   day: 24 * 60 * 60 * 1000,
@@ -15,6 +15,7 @@ const EMPTY_DASHBOARD_DATA: DashboardData = {
   statusDistribution: [],
   trend: [],
   changes: [],
+  allIssues: [],
   latestSnapshot: null,
 };
 
@@ -44,11 +45,12 @@ function isOverdue(issue: IssueSnapshot, now: Date): boolean {
   return !isDone(issue) && issue.dueDate !== null && issue.dueDate < now;
 }
 
-function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues | null) {
+function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues | null, periodStart: Date) {
   const baselineByKey = new Map(baseline?.issues.map((issue) => [issue.issueKey, issue]) ?? []);
   const now = new Date();
 
   const changes: IssueChange[] = [];
+  const allIssues: IssueListItem[] = [];
   const kpis = { newCount: 0, doneCount: 0, statusChangedCount: 0, overdueCount: 0 };
 
   for (const issue of latest.issues) {
@@ -56,24 +58,38 @@ function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues
     const overdue = isOverdue(issue, now);
     if (overdue) kpis.overdueCount++;
 
-    if (!before) {
-      kpis.newCount++;
-      changes.push({
-        issueKey: issue.issueKey,
-        summary: issue.summary,
-        type: "new",
-        toStatus: issue.status,
-        toStatusCategory: issue.statusCategory,
-        assignee: issue.assignee,
-        dueDate: issue.dueDate?.toISOString() ?? null,
-      });
-      continue;
-    }
+    // "신규 이슈" means actually created in Jira within the period — not just
+    // "we hadn't seen it before" (which, on a project's very first sync with
+    // no baseline, would count every existing issue as new).
+    const createdWithinPeriod = issue.jiraCreatedAt >= periodStart;
+    if (createdWithinPeriod) kpis.newCount++;
 
-    if (before.status !== issue.status) {
+    let isStatusChanged = false;
+    let fromStatus: string | undefined;
+    let fromStatusCategory: string | undefined;
+
+    if (!before) {
+      if (createdWithinPeriod) {
+        changes.push({
+          issueKey: issue.issueKey,
+          summary: issue.summary,
+          type: "new",
+          toStatus: issue.status,
+          toStatusCategory: issue.statusCategory,
+          assignee: issue.assignee,
+          dueDate: issue.dueDate?.toISOString() ?? null,
+        });
+      }
+    } else if (before.status !== issue.status) {
       const justCompleted = isDone(issue) && !isDone(before);
-      if (justCompleted) kpis.doneCount++;
-      else kpis.statusChangedCount++;
+      if (justCompleted) {
+        kpis.doneCount++;
+      } else {
+        kpis.statusChangedCount++;
+        isStatusChanged = true;
+      }
+      fromStatus = before.status;
+      fromStatusCategory = before.statusCategory;
 
       changes.push({
         issueKey: issue.issueKey,
@@ -98,6 +114,20 @@ function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues
         dueDate: issue.dueDate?.toISOString() ?? null,
       });
     }
+
+    allIssues.push({
+      issueKey: issue.issueKey,
+      summary: issue.summary,
+      status: issue.status,
+      statusCategory: issue.statusCategory,
+      fromStatus,
+      fromStatusCategory,
+      assignee: issue.assignee,
+      dueDate: issue.dueDate?.toISOString() ?? null,
+      isNew: createdWithinPeriod,
+      isStatusChanged,
+      isOverdue: overdue,
+    });
   }
 
   const latestKeys = new Set(latest.issues.map((issue) => issue.issueKey));
@@ -114,7 +144,7 @@ function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues
     });
   }
 
-  return { changes, kpis };
+  return { changes, allIssues, kpis };
 }
 
 function computeStatusDistribution(latest: SnapshotWithIssues): StatusSlice[] {
@@ -144,9 +174,9 @@ async function buildTrend(projectId: string, period: Period, latest: SnapshotWit
     const snapshot = i === 0 ? latest : await getSnapshotAtOrBefore(projectId, at);
     if (!snapshot) continue;
 
-    const stepBaseline =
-      previousSnapshot ?? (await getSnapshotAtOrBefore(projectId, new Date(snapshot.capturedAt.getTime() - stepMs)));
-    const { kpis } = computeChanges(snapshot, stepBaseline);
+    const periodStart = new Date(snapshot.capturedAt.getTime() - stepMs);
+    const stepBaseline = previousSnapshot ?? (await getSnapshotAtOrBefore(projectId, periodStart));
+    const { kpis } = computeChanges(snapshot, stepBaseline, periodStart);
 
     const label = period === "month" ? `${at.getMonth() + 1}월` : `${at.getMonth() + 1}/${at.getDate()}`;
     points.push({
@@ -168,13 +198,14 @@ export async function getDashboardData(projectId: string, period: Period): Promi
   const baselineDate = new Date(latest.capturedAt.getTime() - PERIOD_MS[period]);
   const baseline = await getSnapshotAtOrBefore(projectId, baselineDate);
 
-  const { changes, kpis } = computeChanges(latest, baseline);
+  const { changes, allIssues, kpis } = computeChanges(latest, baseline, baselineDate);
 
   return {
     kpis,
     statusDistribution: computeStatusDistribution(latest),
     trend: await buildTrend(projectId, period, latest),
     changes,
+    allIssues,
     latestSnapshot: { capturedAt: latest.capturedAt.toISOString(), issueCount: latest.issueCount },
   };
 }

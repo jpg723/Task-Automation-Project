@@ -23,6 +23,31 @@ interface TrendChartProps {
 
 const TICK_STYLE = { fill: "var(--muted-foreground)", fontSize: 12 };
 
+// Recharts' auto-derived legend order doesn't reliably follow <Line>
+// declaration order, so the order is fixed explicitly here instead.
+const LEGEND_ITEMS = [
+  { label: "신규 이슈", color: "var(--seq-dark)" },
+  { label: "완료 이슈", color: "var(--status-good)" },
+  { label: "상태 변경", color: "var(--tint-violet)" },
+];
+
+function ChartLegend() {
+  return (
+    <ul className="flex flex-wrap items-center justify-center gap-4 pt-3 text-xs text-muted-foreground">
+      {LEGEND_ITEMS.map((item) => (
+        <li key={item.label} className="flex items-center gap-1.5">
+          <span
+            className="h-0.5 w-3 rounded-full"
+            style={{ backgroundColor: item.color }}
+            aria-hidden
+          />
+          {item.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function ChartTooltip({
   active,
   payload,
@@ -75,10 +100,7 @@ export function TrendChart({ data }: TrendChartProps) {
           content={(props) => <ChartTooltip {...props} />}
           cursor={{ stroke: "var(--chart-axis)" }}
         />
-        <Legend
-          iconType="plainline"
-          wrapperStyle={{ fontSize: 12, color: "var(--muted-foreground)" }}
-        />
+        <Legend content={<ChartLegend />} />
         <Line
           type="monotone"
           dataKey="newCount"
@@ -90,20 +112,20 @@ export function TrendChart({ data }: TrendChartProps) {
         />
         <Line
           type="monotone"
-          dataKey="statusChangedCount"
-          name="상태 변경"
-          stroke="var(--tint-violet)"
-          strokeWidth={2}
-          dot={{ r: 4, fill: "var(--tint-violet)", stroke: "var(--chart-surface)", strokeWidth: 2 }}
-          activeDot={{ r: 5 }}
-        />
-        <Line
-          type="monotone"
           dataKey="doneCount"
           name="완료 이슈"
           stroke="var(--status-good)"
           strokeWidth={2}
           dot={{ r: 4, fill: "var(--status-good)", stroke: "var(--chart-surface)", strokeWidth: 2 }}
+          activeDot={{ r: 5 }}
+        />
+        <Line
+          type="monotone"
+          dataKey="statusChangedCount"
+          name="상태 변경"
+          stroke="var(--tint-violet)"
+          strokeWidth={2}
+          dot={{ r: 4, fill: "var(--tint-violet)", stroke: "var(--chart-surface)", strokeWidth: 2 }}
           activeDot={{ r: 5 }}
         />
       </LineChart>

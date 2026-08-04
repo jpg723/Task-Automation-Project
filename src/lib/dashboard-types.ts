@@ -27,6 +27,23 @@ export interface IssueChange {
   dueDate?: string | null;
 }
 
+export interface IssueListItem {
+  issueKey: string;
+  summary: string;
+  status: string;
+  statusCategory: string;
+  fromStatus?: string;
+  fromStatusCategory?: string;
+  assignee: string | null;
+  dueDate: string | null;
+  // Same classification the KPI counts use, computed per-issue so the "전체
+  // 이슈/신규/완료/상태 변경/마감 지연" tabs filter to exactly the sets the
+  // cards above count — instead of drifting from a separately-filtered list.
+  isNew: boolean;
+  isStatusChanged: boolean;
+  isOverdue: boolean;
+}
+
 export interface DashboardData {
   kpis: {
     newCount: number;
@@ -37,5 +54,6 @@ export interface DashboardData {
   statusDistribution: StatusSlice[];
   trend: TrendPoint[];
   changes: IssueChange[];
+  allIssues: IssueListItem[];
   latestSnapshot: { capturedAt: string; issueCount: number } | null;
 }

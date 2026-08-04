@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  Layers,
   ListPlus,
   RefreshCcw,
 } from "lucide-react";
@@ -110,20 +111,27 @@ export default function DashboardPage() {
         </Card>
       ) : project && data ? (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <StatTile
-              label="신규 이슈"
+              label="전체"
+              value={data.allIssues.length}
+              icon={Layers}
+              tint="gray"
+              hint="현재 추적 중인 전체 이슈"
+            />
+            <StatTile
+              label="신규"
               value={data.kpis.newCount}
               icon={ListPlus}
               tint="blue"
               hint={`전 ${PERIOD_LABEL[period]} 대비 신규 등록`}
             />
             <StatTile
-              label="완료 이슈"
-              value={data.kpis.doneCount}
+              label="완료"
+              value={data.allIssues.filter((issue) => issue.statusCategory === "done").length}
               icon={CheckCircle2}
               tint="green"
-              hint="Done으로 전환"
+              hint="현재 완료 상태인 이슈"
             />
             <StatTile
               label="상태 변경"
@@ -173,13 +181,13 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">변경 내역</CardTitle>
+              <CardTitle className="text-lg font-semibold">이슈 목록</CardTitle>
               <CardDescription>
-                선택한 기간 동안 상태가 바뀐 이슈 목록
+                전체 이슈와 선택한 기간의 신규·완료·상태 변경·마감 지연 이슈를 확인하세요
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ChangeList changes={data.changes} siteUrl={project.siteUrl} />
+              <ChangeList allIssues={data.allIssues} siteUrl={project.siteUrl} />
             </CardContent>
           </Card>
         </>
