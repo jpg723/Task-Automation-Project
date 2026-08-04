@@ -1,11 +1,10 @@
 "use client";
 
 import {
-  Area,
   CartesianGrid,
-  ComposedChart,
   Legend,
   Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -59,13 +58,7 @@ function ChartTooltip({
 export function TrendChart({ data }: TrendChartProps) {
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <ComposedChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-        <defs>
-          <linearGradient id="totalAreaFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--seq-dark)" stopOpacity={0.18} />
-            <stop offset="100%" stopColor="var(--seq-dark)" stopOpacity={0} />
-          </linearGradient>
-        </defs>
+      <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid
           vertical={false}
           stroke="var(--chart-grid)"
@@ -86,26 +79,34 @@ export function TrendChart({ data }: TrendChartProps) {
           iconType="plainline"
           wrapperStyle={{ fontSize: 12, color: "var(--muted-foreground)" }}
         />
-        <Area
+        <Line
           type="monotone"
-          dataKey="total"
-          name="전체 이슈"
+          dataKey="newCount"
+          name="신규 이슈"
           stroke="var(--seq-dark)"
           strokeWidth={2}
-          fill="url(#totalAreaFill)"
           dot={{ r: 4, fill: "var(--seq-dark)", stroke: "var(--chart-surface)", strokeWidth: 2 }}
           activeDot={{ r: 5 }}
         />
         <Line
           type="monotone"
-          dataKey="done"
-          name="완료 이슈"
-          stroke="var(--seq-light)"
+          dataKey="statusChangedCount"
+          name="상태 변경"
+          stroke="var(--tint-violet)"
           strokeWidth={2}
-          dot={{ r: 4, fill: "var(--seq-light)", stroke: "var(--chart-surface)", strokeWidth: 2 }}
+          dot={{ r: 4, fill: "var(--tint-violet)", stroke: "var(--chart-surface)", strokeWidth: 2 }}
           activeDot={{ r: 5 }}
         />
-      </ComposedChart>
+        <Line
+          type="monotone"
+          dataKey="doneCount"
+          name="완료 이슈"
+          stroke="var(--status-good)"
+          strokeWidth={2}
+          dot={{ r: 4, fill: "var(--status-good)", stroke: "var(--chart-surface)", strokeWidth: 2 }}
+          activeDot={{ r: 5 }}
+        />
+      </LineChart>
     </ResponsiveContainer>
   );
 }

@@ -108,17 +108,18 @@ Jira 프로젝트 링크를 등록해두면, 일/주/월 단위로 **전 기간 
 | 데이터 페칭/캐싱 | TanStack Query |
 | Backend | Next.js Route Handlers (풀스택 단일 프로젝트) |
 | ORM | Prisma 7 (driver adapter 방식, `@prisma/adapter-pg` 사용) |
-| DB | PostgreSQL (Neon 또는 Supabase) |
-| 스케줄링 | Vercel Cron (일 단위 스냅샷 수집) |
-| 인증 | 개인용 간단 비밀번호 세션 인증 |
-| 배포 | Vercel |
+| DB | PostgreSQL — 로컬은 Postgres.app, 프로덕션은 Supabase (확정) |
+| 스케줄링 | GitHub Actions 스케줄 워크플로우가 매시간 배포된 앱의 `/api/cron/sync` 호출 (Vercel Cron은 Hobby 플랜 하루 1회 제한으로 미채택) |
+| 인증 | 미구현. Vercel Deployment Protection으로 배포 URL 노출을 선택적으로 제한 |
+| 배포 | Vercel (완료, `main` 브랜치 push 시 자동 재배포) |
 | 외부 연동 | Jira REST API v3, MS Teams Incoming Webhook (Adaptive Cards) |
 
 Next.js 풀스택 구조를 택해 프론트/백엔드를 한 저장소로 관리하고, Vercel + Neon/Supabase 조합으로 별도 서버 운영 없이 배포한다. 개인용 서비스이므로 인증은 NextAuth 등 무거운 구조 대신 단일 비밀번호 세션으로 단순화한다.
 
 ## 8. 다음 결정 필요 사항 (개발 착수 전)
 
-- 배포 환경: 우선 로컬 개발 후 Vercel 배포 여부/시점
-- Teams Webhook 외 Jira Webhook(실시간 이벤트) 활용 여부
-- DB 호스팅: 로컬 개발은 Postgres.app(PG17, `localhost:5432`)으로 확정. 배포 시 Neon vs Supabase 중 최종 선택은 미정
-- 스냅샷 수집 주기: 현재는 프로젝트 카드의 '지금 동기화' 버튼을 통한 수동 트리거만 구현됨. Vercel Cron을 이용한 일 단위 자동 수집은 별도 작업으로 남겨둠
+- ~~배포 환경~~ → Vercel 배포 완료 (`https://task-automation-project.vercel.app`)
+- Teams Webhook 외 Jira Webhook(실시간 이벤트) 활용 여부 — 미정
+- ~~DB 호스팅~~ → 로컬은 Postgres.app(PG17, `localhost:5432`), 프로덕션은 Supabase로 확정
+- ~~스냅샷 수집 주기~~ → 수동('지금 동기화' 버튼) + 매시간 자동(GitHub Actions, Vercel Cron은 Hobby 플랜 제약으로 미채택) 둘 다 구현 완료
+- 인증: 여전히 미구현. 현재는 Vercel Deployment Protection(선택)으로 배포 URL 노출만 제한하고 있어, 앱 자체 로그인이 필요한 시점은 별도 결정 필요

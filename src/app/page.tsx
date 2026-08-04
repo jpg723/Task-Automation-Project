@@ -162,7 +162,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">처리 추이</CardTitle>
                 <CardDescription>
-                  전체 이슈 대비 완료 이슈 수 변화
+                  기간별 신규·상태 변경·완료 이슈 수 변화
                 </CardDescription>
               </CardHeader>
               <CardContent>

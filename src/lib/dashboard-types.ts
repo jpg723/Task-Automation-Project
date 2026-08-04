@@ -8,8 +8,9 @@ export interface StatusSlice {
 
 export interface TrendPoint {
   label: string;
-  total: number;
-  done: number;
+  newCount: number;
+  statusChangedCount: number;
+  doneCount: number;
 }
 
 export type IssueChangeType = "new" | "done" | "status_changed" | "overdue" | "removed";

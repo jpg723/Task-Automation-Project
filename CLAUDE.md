@@ -15,7 +15,7 @@ Jira 프로젝트 링크를 등록해두면 일/주/월 단위로 전 기간 대
 ## 주요 기능
 
 - 프로젝트 관리: 프로젝트 이름 + Jira 에픽 링크(예: `https://team.atlassian.net/browse/PROJ-123`)만 입력하면 사이트 URL/프로젝트 키/에픽 키를 자동 파싱해 등록 — 그 하위 이슈만 추적. Jira 계정 이메일/API 토큰은 최초 1회만 입력하면 이후 등록부터 자동 재사용(다른 계정으로 등록하고 싶을 때만 별도 입력). 등록/수정/삭제는 실제 Postgres DB에 저장, API 토큰은 AES-256-GCM 암호화
-- 이슈 데이터 수집: 등록된 프로젝트 카드의 '지금 동기화' 버튼으로 Jira REST API를 호출해 이슈를 가져와 스냅샷으로 저장 (수동 트리거만 구현, 자동 스케줄링은 미구현)
+- 이슈 데이터 수집: 등록된 프로젝트 카드의 '지금 동기화' 버튼(수동) + 매시간 자동 동기화(GitHub Actions → 배포된 앱의 `/api/cron/sync` 호출)로 Jira REST API에서 이슈를 가져와 스냅샷으로 저장
 - 변경 사항 추적(Diff): 두 스냅샷을 비교해 신규/완료/상태 변경/삭제(필터 이탈)/마감 지연 이슈를 계산
 - 대시보드: 기간별(일/주/월) 이슈 처리 현황, 상태 분포, 처리 추이, 변경 내역을 실제 DB 데이터로 표시
 - 자동 보고: 정해진 주기(일/주/월)로 리포트 생성 및 MS Teams 자동 발송 (미구현)
@@ -33,16 +33,22 @@ Jira 프로젝트 링크를 등록해두면 일/주/월 단위로 전 기간 대
 - 데이터 페칭/캐싱: TanStack Query
 - Backend: Next.js Route Handlers (풀스택 단일 프로젝트)
 - ORM: Prisma 7 (driver adapter 방식 — `@prisma/adapter-pg` + `pg` 필요, `PrismaClient`는 반드시 adapter와 함께 생성)
-- DB: PostgreSQL (Neon 또는 Supabase — 서버리스 배포에 적합)
-- 스케줄링: Vercel Cron (일 단위 스냅샷 수집)
-- 인증: 개인용 간단 비밀번호 세션 인증 (배포 시 외부 노출 방지 목적)
-- 배포: Vercel
+- DB: PostgreSQL — 로컬 개발은 Postgres.app, 프로덕션은 Supabase (확정, 배포 완료)
+- 스케줄링: GitHub Actions 스케줄 워크플로우가 매시간 배포된 앱의 `/api/cron/sync`를 호출 (Vercel Cron은 Hobby 플랜이 하루 1회로 제한돼 있어 채택하지 않음)
+- 인증: 아직 미구현. 대신 Vercel Deployment Protection(선택 적용)으로 배포 URL 노출 위험을 완화
+- 배포: Vercel (완료, `https://task-automation-project.vercel.app`)
 - 외부 연동: Jira REST API v3, MS Teams Incoming Webhook (Adaptive Cards)
 
 ## 현재 상태
 
 - 요구사항 명세 완료 ([docs/requirements.md](docs/requirements.md))
 - 로컬 개발용 DB: Postgres.app(PG17)을 `/Applications/Postgres.app`에 설치해 `localhost:5432`에서 실행 중 (데이터 디렉터리 `~/Library/Application Support/Postgres/var-17`). 마이그레이션 적용 완료(`prisma/migrations/20260803080419_init`, `20260804001858_add_epic_key`, `20260804003251_default_jira_credentials`), `prisma/seed.ts`로 `AppSetting` 싱글톤 row 시드.
+- **배포 완료** — `https://task-automation-project.vercel.app` (Vercel, GitHub `jpg723/Task-Automation-Project` `main` 브랜치 연동, push할 때마다 자동 재배포):
+  - 프로덕션 DB는 Supabase Postgres. `DATABASE_URL`(Transaction pooler, 포트 6543, `?pgbouncer=true`)은 런타임 앱(`src/lib/prisma.ts`)이, `DIRECT_URL`(Session pooler, 포트 5432)은 CLI/마이그레이션(`prisma.config.ts`)이 사용 — 서버리스 환경에서 PgBouncer 트랜잭션 풀러가 DDL을 안정적으로 처리하지 못해서 분리함. Supabase의 "Direct connection" 호스트는 IPv6 전용이라 이 환경에서 접속이 안 됐고, 대신 IPv4를 지원하는 Session pooler를 direct 커넥션 용도로 사용
+  - `package.json`의 `build` 스크립트가 `prisma migrate deploy && next build`라서 배포마다 대기 중인 마이그레이션이 자동 적용됨
+  - 매시간 자동 동기화: `src/app/api/cron/sync/route.ts`(`CRON_SECRET`으로 인증, 활성 프로젝트 전체에 `runSnapshot` 실행) + `.github/workflows/hourly-sync.yml`(GitHub Actions 스케줄, 매시간 `curl`로 위 엔드포인트 호출 — repo secrets `CRON_SECRET`/`APP_URL`/`VERCEL_PROTECTION_BYPASS` 필요). **Vercel Cron이 아닌 GitHub Actions를 쓰는 이유**: Vercel Hobby(무료) 플랜은 Cron Job이 하루 1회로 제한돼 있어서 매시간 스케줄이 안 먹힘
+  - Vercel 프로젝트 환경변수: `DATABASE_URL`, `DIRECT_URL`, `ENCRYPTION_KEY`, `SESSION_SECRET`, `CRON_SECRET` (로컬 `.env`와는 별개 값 사용 — 운영/로컬 시크릿 분리)
+  - git 커밋 작성자 이메일이 GitHub 계정의 인증된 이메일과 다르면 Vercel이 배포를 막음(`Deployment Blocked`) — 이 저장소는 `git config user.email`을 GitHub 계정 이메일로 고정해둠
 - **DB 연동 완료** — 프로젝트 CRUD, Jira 스냅샷 수집, 대시보드 diff가 모두 실제 Postgres에 연결되어 동작:
   - `src/app/api/projects/route.ts` POST: 등록 폼은 이름+에픽 링크+(선택)이메일+(선택)API 토큰만 받음. `src/lib/jira.ts`의 `parseEpicLink()`로 링크에서 siteUrl/projectKey/epicKey를 파싱하고, `verifyConnection()`으로 실제 Jira 인증 확인 후 `buildEpicScopedJql()`(`"Epic Link" = X OR parent = X`, 클래식·팀 관리형 프로젝트 모두 커버)을 jql에 자동 저장. 이름을 안 적으면 `getIssue()`로 에픽 요약을 기본값으로 사용. `Project.epicKey` 컬럼 추가, 유니크 제약은 `(siteUrl, projectKey, epicKey)` — 같은 프로젝트의 서로 다른 에픽을 각각 등록 가능
   - 계정 정보 재사용: `src/lib/app-settings.ts`(`AppSetting.defaultJiraEmail`/`defaultJiraApiTokenEnc`)에 마지막으로 입력한 이메일/토큰을 저장해두고, 다음 등록부터 이메일/토큰을 생략하면 자동으로 재사용. 이메일·토큰 중 하나만 보내면 400. `GET /api/settings`로 프론트가 "저장된 계정 있음" 여부를 확인해 입력란을 숨김/노출
@@ -52,7 +58,7 @@ Jira 프로젝트 링크를 등록해두면 일/주/월 단위로 전 기간 대
   - `src/lib/diff.ts` + `src/app/api/dashboard/route.ts`: 두 스냅샷 비교로 신규/완료/상태변경/삭제/지연 계산, 상태 분포·처리 추이 집계. "신규"/"삭제" 이슈는 상태 전이(from→to)가 아니라 현재/마지막 상태 하나만 있으므로 `toStatus`/`fromStatus` 중 있는 쪽만 채움 — `change-list.tsx`는 양쪽 다 있으면 화살표로, 한쪽만 있으면 단일 뱃지로 표시
   - 프론트엔드는 TanStack Query(`src/hooks/use-projects.ts`, `src/hooks/use-dashboard.ts`, `src/hooks/use-app-settings.ts`)로 위 API를 호출 — `/`, `/projects` 페이지 모두 mock 데이터 제거 완료 (`src/lib/mock-data.ts` 삭제됨). 등록 다이얼로그(`project-form-dialog.tsx`)는 등록용 `EpicCreateForm`과 수정용 `ProjectEditForm`으로 분리됨. API 토큰 라벨 옆 물음표 아이콘(호버 시 발급 방법 툴팁)은 shadcn `tooltip` 컴포넌트 사용 — `Providers`에 `TooltipProvider` 추가됨
   - 차트 색상은 dataviz 스킬의 검증된 팔레트를 `globals.css`에 CSS 변수로 이식해서 사용 (`--chart-1`~`--chart-8`, `--status-*`)
-- 아직 없음: 인증(비밀번호 세션), Vercel Cron 자동 스케줄링(현재는 수동 동기화만), Teams 발송 로직, 프로젝트 수정 폼의 색상 태그 입력 UI, 에픽이 아닌 "프로젝트 전체 추적" 등록 경로(현재 등록 폼은 에픽 링크 전용)
+- 아직 없음: 인증(비밀번호 세션) — 대신 Vercel Deployment Protection으로 배포 URL 접근을 제한 가능(선택), Teams 발송 로직, 프로젝트 수정 폼의 색상 태그 입력 UI, 에픽이 아닌 "프로젝트 전체 추적" 등록 경로(현재 등록 폼은 에픽 링크 전용)
 
 ## 개발 규칙
 

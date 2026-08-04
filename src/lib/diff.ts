@@ -127,20 +127,35 @@ function computeStatusDistribution(latest: SnapshotWithIssues): StatusSlice[] {
   return Array.from(counts.values());
 }
 
+/**
+ * Per-step counts: how many issues turned new / changed status / completed
+ * between the *previous* step's snapshot and this one — i.e. the same kind
+ * of diff the KPI cards compute, just repeated across the trend window
+ * instead of once against the period's overall baseline.
+ */
 async function buildTrend(projectId: string, period: Period, latest: SnapshotWithIssues): Promise<TrendPoint[]> {
   const steps = period === "day" ? 7 : 6;
   const stepMs = PERIOD_MS[period];
   const points: TrendPoint[] = [];
 
+  let previousSnapshot: SnapshotWithIssues | null = null;
   for (let i = steps - 1; i >= 0; i--) {
     const at = new Date(latest.capturedAt.getTime() - i * stepMs);
     const snapshot = i === 0 ? latest : await getSnapshotAtOrBefore(projectId, at);
     if (!snapshot) continue;
 
-    const total = snapshot.issues.length;
-    const done = snapshot.issues.filter(isDone).length;
+    const stepBaseline =
+      previousSnapshot ?? (await getSnapshotAtOrBefore(projectId, new Date(snapshot.capturedAt.getTime() - stepMs)));
+    const { kpis } = computeChanges(snapshot, stepBaseline);
+
     const label = period === "month" ? `${at.getMonth() + 1}월` : `${at.getMonth() + 1}/${at.getDate()}`;
-    points.push({ label, total, done });
+    points.push({
+      label,
+      newCount: kpis.newCount,
+      statusChangedCount: kpis.statusChangedCount,
+      doneCount: kpis.doneCount,
+    });
+    previousSnapshot = snapshot;
   }
 
   return points;
