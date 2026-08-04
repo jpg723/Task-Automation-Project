@@ -63,6 +63,7 @@ function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues
         summary: issue.summary,
         type: "new",
         toStatus: issue.status,
+        toStatusCategory: issue.statusCategory,
         assignee: issue.assignee,
         dueDate: issue.dueDate?.toISOString() ?? null,
       });
@@ -79,7 +80,9 @@ function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues
         summary: issue.summary,
         type: justCompleted ? "done" : "status_changed",
         fromStatus: before.status,
+        fromStatusCategory: before.statusCategory,
         toStatus: issue.status,
+        toStatusCategory: issue.statusCategory,
         assignee: issue.assignee,
       });
     } else if (overdue) {
@@ -88,7 +91,9 @@ function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues
         summary: issue.summary,
         type: "overdue",
         fromStatus: issue.status,
+        fromStatusCategory: issue.statusCategory,
         toStatus: issue.status,
+        toStatusCategory: issue.statusCategory,
         assignee: issue.assignee,
         dueDate: issue.dueDate?.toISOString() ?? null,
       });
@@ -103,6 +108,7 @@ function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues
       summary: before.summary,
       type: "removed",
       fromStatus: before.status,
+      fromStatusCategory: before.statusCategory,
       assignee: before.assignee,
       dueDate: before.dueDate?.toISOString() ?? null,
     });

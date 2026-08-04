@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -10,6 +10,19 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { IssueChange, IssueChangeType } from "@/lib/dashboard-types";
+
+// Same three-way mapping as the status-distribution donut chart: Jira's
+// status category is one of a fixed "new"/"indeterminate"/"done" set.
+const CATEGORY_COLOR_VAR: Record<string, string> = {
+  new: "--muted-foreground",
+  indeterminate: "--seq-dark",
+  done: "--status-good",
+};
+
+function statusBadgeClassName(category?: string) {
+  const colorVar = (category && CATEGORY_COLOR_VAR[category]) || "--muted-foreground";
+  return `bg-[color:var(${colorVar})]/15 text-[color:var(${colorVar})] border-[color:var(${colorVar})]/30`;
+}
 
 const TYPE_META: Record<IssueChangeType, { label: string; className: string }> = {
   new: {
@@ -38,7 +51,13 @@ const TYPE_META: Record<IssueChangeType, { label: string; className: string }> =
   },
 };
 
-export function ChangeList({ changes }: { changes: IssueChange[] }) {
+export function ChangeList({
+  changes,
+  siteUrl,
+}: {
+  changes: IssueChange[];
+  siteUrl: string;
+}) {
   if (changes.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
@@ -64,10 +83,16 @@ export function ChangeList({ changes }: { changes: IssueChange[] }) {
           return (
             <TableRow key={change.issueKey}>
               <TableCell>
-                <div className="flex flex-col">
-                  <span className="font-mono text-xs font-medium text-muted-foreground">
+                <div className="flex flex-col gap-1">
+                  <a
+                    href={`${siteUrl.replace(/\/+$/, "")}/browse/${change.issueKey}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-fit items-center gap-1 font-mono text-xs font-medium text-muted-foreground hover:text-foreground"
+                  >
                     {change.issueKey}
-                  </span>
+                    <ExternalLink className="size-3" />
+                  </a>
                   <span className="text-sm">{change.summary}</span>
                 </div>
               </TableCell>
@@ -79,15 +104,30 @@ export function ChangeList({ changes }: { changes: IssueChange[] }) {
               <TableCell>
                 {change.fromStatus && change.toStatus ? (
                   <span className="flex items-center gap-1.5">
-                    <Badge variant="outline">{change.fromStatus}</Badge>
+                    <Badge
+                      variant="outline"
+                      className={statusBadgeClassName(change.fromStatusCategory)}
+                    >
+                      {change.fromStatus}
+                    </Badge>
                     <ArrowRight
                       className="size-3.5 text-muted-foreground"
                       aria-hidden
                     />
-                    <Badge variant="outline">{change.toStatus}</Badge>
+                    <Badge
+                      variant="outline"
+                      className={statusBadgeClassName(change.toStatusCategory)}
+                    >
+                      {change.toStatus}
+                    </Badge>
                   </span>
                 ) : change.toStatus || change.fromStatus ? (
-                  <Badge variant="outline">
+                  <Badge
+                    variant="outline"
+                    className={statusBadgeClassName(
+                      change.toStatusCategory ?? change.fromStatusCategory,
+                    )}
+                  >
                     {change.toStatus ?? change.fromStatus}
                   </Badge>
                 ) : (

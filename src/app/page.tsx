@@ -179,7 +179,7 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ChangeList changes={data.changes} />
+              <ChangeList changes={data.changes} siteUrl={project.siteUrl} />
             </CardContent>
           </Card>
         </>

@@ -19,7 +19,9 @@ export interface IssueChange {
   summary: string;
   type: IssueChangeType;
   fromStatus?: string;
+  fromStatusCategory?: string;
   toStatus?: string;
+  toStatusCategory?: string;
   assignee?: string | null;
   dueDate?: string | null;
 }
