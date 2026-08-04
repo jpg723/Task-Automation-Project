@@ -13,15 +13,18 @@ import type { IssueChange, IssueChangeType } from "@/lib/dashboard-types";
 
 // Same three-way mapping as the status-distribution donut chart: Jira's
 // status category is one of a fixed "new"/"indeterminate"/"done" set.
-const CATEGORY_COLOR_VAR: Record<string, string> = {
-  new: "--muted-foreground",
-  indeterminate: "--seq-dark",
-  done: "--status-good",
+// Class strings must stay fully static (not built via `${}` interpolation) —
+// Tailwind's build-time scanner only picks up literal class text, so an
+// interpolated `bg-[color:var(${colorVar})]/15` never gets its CSS emitted.
+const STATUS_CATEGORY_CLASS: Record<string, string> = {
+  new: "bg-[color:var(--muted-foreground)]/15 text-[color:var(--muted-foreground)] border-[color:var(--muted-foreground)]/30",
+  indeterminate:
+    "bg-[color:var(--seq-dark)]/15 text-[color:var(--seq-dark)] border-[color:var(--seq-dark)]/30",
+  done: "bg-[color:var(--status-good)]/15 text-[color:var(--status-good)] border-[color:var(--status-good)]/30",
 };
 
 function statusBadgeClassName(category?: string) {
-  const colorVar = (category && CATEGORY_COLOR_VAR[category]) || "--muted-foreground";
-  return `bg-[color:var(${colorVar})]/15 text-[color:var(${colorVar})] border-[color:var(${colorVar})]/30`;
+  return (category && STATUS_CATEGORY_CLASS[category]) || STATUS_CATEGORY_CLASS.new;
 }
 
 const TYPE_META: Record<IssueChangeType, { label: string; className: string }> = {
@@ -83,7 +86,7 @@ export function ChangeList({
           return (
             <TableRow key={change.issueKey}>
               <TableCell>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-2">
                   <a
                     href={`${siteUrl.replace(/\/+$/, "")}/browse/${change.issueKey}`}
                     target="_blank"

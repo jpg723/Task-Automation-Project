@@ -41,14 +41,14 @@ function ApiTokenHelp() {
           </button>
         }
       />
-      <TooltipContent>
+      <TooltipContent className="block max-w-64 text-left leading-relaxed">
         <a
           href="https://id.atlassian.com/manage-profile/security/api-tokens"
           target="_blank"
           rel="noopener noreferrer"
           className="underline underline-offset-2"
         >
-          이 링크
+          해당 Jira 링크
         </a>
         로 이동해 API 토큰을 발급받으세요. 생성 시 한 번만 표시되니 바로
         복사해두세요.
