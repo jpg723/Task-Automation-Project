@@ -62,6 +62,7 @@ function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues
         issueKey: issue.issueKey,
         summary: issue.summary,
         type: "new",
+        toStatus: issue.status,
         assignee: issue.assignee,
         dueDate: issue.dueDate?.toISOString() ?? null,
       });
@@ -103,6 +104,7 @@ function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues
       type: "removed",
       fromStatus: before.status,
       assignee: before.assignee,
+      dueDate: before.dueDate?.toISOString() ?? null,
     });
   }
 

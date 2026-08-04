@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ProjectCard } from "@/components/projects/project-card";
 import {
   ProjectFormDialog,
-  type ProjectFormValues,
+  type ProjectCreateFormValues,
+  type ProjectEditFormValues,
 } from "@/components/projects/project-form-dialog";
 import type { Project } from "@/lib/project-types";
 import {
@@ -44,25 +45,37 @@ export default function ProjectsPage() {
     deleteProject.mutate(id);
   }
 
-  function handleSubmit(values: ProjectFormValues) {
-    const input = {
-      name: values.name,
-      colorTag: values.colorTag,
-      siteUrl: values.siteUrl,
-      projectKey: values.projectKey,
-      email: values.email,
-      apiToken: values.apiToken || undefined,
-      jql: values.jql || null,
-      reportEnabled: values.reportEnabled,
-      reportFrequency: values.reportFrequency,
-      teamsWebhookUrl: values.teamsWebhookUrl || null,
-    };
+  function handleCreate(values: ProjectCreateFormValues) {
+    createProject
+      .mutateAsync({
+        name: values.name,
+        epicLink: values.epicLink,
+        email: values.email || undefined,
+        apiToken: values.apiToken || undefined,
+      })
+      .then(() => setFormOpen(false))
+      .catch(() => {});
+  }
 
-    const mutation = editingProject
-      ? updateProject.mutateAsync({ id: editingProject.id, input })
-      : createProject.mutateAsync(input);
-
-    mutation.then(() => setFormOpen(false)).catch(() => {});
+  function handleUpdate(values: ProjectEditFormValues) {
+    if (!editingProject) return;
+    updateProject
+      .mutateAsync({
+        id: editingProject.id,
+        input: {
+          name: values.name,
+          colorTag: values.colorTag,
+          siteUrl: values.siteUrl,
+          projectKey: values.projectKey,
+          email: values.email,
+          apiToken: values.apiToken || undefined,
+          reportEnabled: values.reportEnabled,
+          reportFrequency: values.reportFrequency,
+          teamsWebhookUrl: values.teamsWebhookUrl || null,
+        },
+      })
+      .then(() => setFormOpen(false))
+      .catch(() => {});
   }
 
   return (
@@ -94,9 +107,6 @@ export default function ProjectsPage() {
             <p className="text-sm text-muted-foreground">
               등록된 프로젝트가 없습니다.
             </p>
-            <Button onClick={openCreateDialog}>
-              <Plus className="size-4" />첫 프로젝트 등록하기
-            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -118,7 +128,8 @@ export default function ProjectsPage() {
         onOpenChange={setFormOpen}
         editingProject={editingProject}
         isSubmitting={createProject.isPending || updateProject.isPending}
-        onSubmit={handleSubmit}
+        onCreate={handleCreate}
+        onUpdate={handleUpdate}
       />
     </div>
   );

@@ -31,27 +31,25 @@ export function ProjectCard({
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-3">
+        <div className="relative">
           <span
-            className="mt-1 size-2.5 shrink-0 rounded-full"
+            className="absolute top-1.5 -left-4 size-2.5 rounded-full"
             style={{ backgroundColor: project.colorTag ?? undefined }}
             aria-hidden
           />
-          <div>
-            <h3 className="font-semibold leading-tight">{project.name}</h3>
-            <div className="mt-1 flex items-center gap-1.5">
-              <Badge
-                variant="secondary"
-                className="font-mono text-[11px] font-medium tracking-wide"
-              >
-                {project.projectKey}
+          <h3 className="font-semibold leading-tight">{project.name}</h3>
+          <div className="mt-2 flex items-center gap-1.5">
+            <Badge
+              variant="secondary"
+              className="font-mono text-[11px] font-medium tracking-wide"
+            >
+              {project.projectKey}
+            </Badge>
+            {!project.isActive && (
+              <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                일시중지
               </Badge>
-              {!project.isActive && (
-                <Badge variant="outline" className="text-[11px] text-muted-foreground">
-                  일시중지
-                </Badge>
-              )}
-            </div>
+            )}
           </div>
         </div>
 

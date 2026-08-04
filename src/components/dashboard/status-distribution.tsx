@@ -12,33 +12,21 @@ interface StatusDistributionProps {
   data: StatusSlice[];
 }
 
-// Non-"done" statuses cycle through the categorical chart palette in order of
-// appearance; "done" always breaks to the status-good green since "complete"
-// is a semantic state, not just another workflow stage.
-const NON_DONE_PALETTE = [
-  "--chart-1",
-  "--chart-2",
-  "--chart-3",
-  "--chart-4",
-  "--chart-5",
-  "--chart-6",
-  "--chart-7",
-  "--chart-8",
-];
+// Jira's status category is one of three fixed values ("new" / "indeterminate"
+// / "done"), so every status maps directly to one of three semantic colors
+// instead of cycling through a categorical palette.
+const CATEGORY_COLOR_VAR: Record<string, string> = {
+  new: "--muted-foreground",
+  indeterminate: "--seq-dark",
+  done: "--status-good",
+};
 
-function colorVarFor(slice: StatusSlice, nonDoneIndex: number): string {
-  return slice.statusCategory === "done"
-    ? "--status-good"
-    : NON_DONE_PALETTE[nonDoneIndex % NON_DONE_PALETTE.length];
+function colorVarFor(slice: StatusSlice): string {
+  return CATEGORY_COLOR_VAR[slice.statusCategory] ?? "--muted-foreground";
 }
 
 function withColorVars(data: StatusSlice[]): (StatusSlice & { colorVar: string })[] {
-  let nonDoneIndex = 0;
-  return data.map((slice) => {
-    const colorVar = colorVarFor(slice, nonDoneIndex);
-    if (slice.statusCategory !== "done") nonDoneIndex++;
-    return { ...slice, colorVar };
-  });
+  return data.map((slice) => ({ ...slice, colorVar: colorVarFor(slice) }));
 }
 
 function DonutTooltip({

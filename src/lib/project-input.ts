@@ -40,14 +40,19 @@ function asBody(input: unknown): Record<string, unknown> {
   return input as Record<string, unknown>;
 }
 
+/**
+ * Registration payload: a single Jira epic link is the source of truth for
+ * siteUrl/projectKey/epicKey (parsed in the route via `parseEpicLink`), and
+ * name/jql default from the epic itself when not explicitly provided.
+ * email/apiToken are optional — when omitted, the route falls back to the
+ * remembered default credentials (see src/lib/app-settings.ts).
+ */
 export interface ProjectCreateInput {
-  name: string;
+  name: string | null;
   colorTag: string | null;
-  siteUrl: string;
-  projectKey: string;
-  email: string;
-  apiToken: string;
-  jql: string | null;
+  epicLink: string;
+  email: string | null;
+  apiToken: string | null;
   reportEnabled: boolean;
   reportFrequency: ReportFrequency;
   teamsWebhookUrl: string | null;
@@ -56,13 +61,11 @@ export interface ProjectCreateInput {
 export function parseProjectCreateInput(input: unknown): ProjectCreateInput {
   const body = asBody(input);
   return {
-    name: requireString(body, "name"),
+    name: optionalNullableString(body, "name") ?? null,
     colorTag: optionalNullableString(body, "colorTag") ?? null,
-    siteUrl: requireString(body, "siteUrl").replace(/\/+$/, ""),
-    projectKey: requireString(body, "projectKey").toUpperCase(),
-    email: requireString(body, "email"),
-    apiToken: requireString(body, "apiToken"),
-    jql: optionalNullableString(body, "jql") ?? null,
+    epicLink: requireString(body, "epicLink"),
+    email: optionalNullableString(body, "email") ?? null,
+    apiToken: optionalNullableString(body, "apiToken") ?? null,
     reportEnabled: optionalBoolean(body, "reportEnabled") ?? true,
     reportFrequency: optionalReportFrequency(body) ?? ReportFrequency.DAILY,
     teamsWebhookUrl: optionalNullableString(body, "teamsWebhookUrl") ?? null,

@@ -59,18 +59,13 @@ export default function DashboardPage() {
           value={projectId}
           onValueChange={(value) => setProjectId(value ?? "")}
         >
-          <SelectTrigger className="w-56">
+          <SelectTrigger className="w-56 pl-3">
             <SelectValue placeholder="프로젝트 선택">
               {(value: string | null) => {
                 const selected = trackedProjects.find((p) => p.id === value);
                 if (!selected) return "프로젝트 선택";
                 return (
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="size-2 rounded-full"
-                      style={{ backgroundColor: selected.colorTag ?? undefined }}
-                      aria-hidden
-                    />
+                  <span className="block w-full truncate text-left">
                     {selected.name}
                   </span>
                 );
@@ -79,15 +74,8 @@ export default function DashboardPage() {
           </SelectTrigger>
           <SelectContent>
             {trackedProjects.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                <span className="flex items-center gap-2">
-                  <span
-                    className="size-2 rounded-full"
-                    style={{ backgroundColor: p.colorTag ?? undefined }}
-                    aria-hidden
-                  />
-                  {p.name}
-                </span>
+              <SelectItem key={p.id} value={p.id} className="pl-3">
+                {p.name}
               </SelectItem>
             ))}
           </SelectContent>

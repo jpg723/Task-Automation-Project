@@ -86,6 +86,10 @@ export function ChangeList({ changes }: { changes: IssueChange[] }) {
                     />
                     <Badge variant="outline">{change.toStatus}</Badge>
                   </span>
+                ) : change.toStatus || change.fromStatus ? (
+                  <Badge variant="outline">
+                    {change.toStatus ?? change.fromStatus}
+                  </Badge>
                 ) : (
                   <span className="text-sm text-muted-foreground">—</span>
                 )}

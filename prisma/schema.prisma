@@ -31,6 +31,7 @@ model Project {
   // Jira Cloud connection details
   siteUrl     String // e.g. https://your-domain.atlassian.net
   projectKey  String // e.g. "PROJ"
+  epicKey     String? // tracked epic's issue key, e.g. "PROJ-123"; null when tracking the whole project
   email       String // Jira account email used for basic auth
   apiTokenEnc String // AES-256-GCM encrypted API token, see src/lib/crypto.ts
   jql         String? // optional custom JQL filter; falls back to `project = <projectKey>`
@@ -46,7 +47,7 @@ model Project {
   snapshots Snapshot[]
   reports   Report[]
 
-  @@unique([siteUrl, projectKey])
+  @@unique([siteUrl, projectKey, epicKey])
 }
 
 /// One issue-collection run for a project, taken on a schedule (default: daily).
@@ -109,4 +110,9 @@ model AppSetting {
   defaultTeamsWebhookUrl String?
   reportHourUtc          Int     @default(0) // hour of day (UTC) the daily cron runs
   dashboardPasswordHash  String?
+
+  // Remembered Jira credentials, reused so registering a new project/epic
+  // doesn't require retyping email + API token every time.
+  defaultJiraEmail       String?
+  defaultJiraApiTokenEnc String? // AES-256-GCM encrypted, see src/lib/crypto.ts
 }

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fetchJson } from "@/lib/fetch-json";
-import type { Project, ProjectInput } from "@/lib/project-types";
+import type { EpicProjectCreateInput, Project, ProjectUpdateInput } from "@/lib/project-types";
 
 const PROJECTS_KEY = ["projects"];
 
@@ -17,7 +17,7 @@ export function useProjects() {
 export function useCreateProject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: ProjectInput) =>
+    mutationFn: (input: EpicProjectCreateInput) =>
       fetchJson<Project>("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -25,6 +25,7 @@ export function useCreateProject() {
       }),
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
       toast.success(`'${project.name}' 프로젝트를 등록했습니다.`);
     },
     onError: (error: Error) => toast.error(error.message),
@@ -34,7 +35,7 @@ export function useCreateProject() {
 export function useUpdateProject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Partial<ProjectInput> & { isActive?: boolean } }) =>
+    mutationFn: ({ id, input }: { id: string; input: ProjectUpdateInput }) =>
       fetchJson<Project>(`/api/projects/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

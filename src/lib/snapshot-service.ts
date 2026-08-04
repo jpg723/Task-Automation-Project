@@ -23,12 +23,17 @@ export async function runSnapshot(projectId: string) {
     siteUrl: project.siteUrl,
     email: project.email,
     apiToken: decryptSecret(project.apiTokenEnc),
+    projectKey: project.projectKey,
   });
 
   const jql = project.jql ?? buildDefaultJql(project.projectKey);
 
   try {
-    const issues = await client.searchAllIssues(jql);
+    // Epic-scoped tracking needs the extra subtask pass — see
+    // searchAllIssuesWithDescendants for why a plain epic JQL misses them.
+    const issues = project.epicKey
+      ? await client.searchAllIssuesWithDescendants(jql)
+      : await client.searchAllIssues(jql);
     return await prisma.snapshot.create({
       data: {
         projectId,

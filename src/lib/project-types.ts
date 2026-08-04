@@ -8,6 +8,7 @@ export interface Project {
   isActive: boolean;
   siteUrl: string;
   projectKey: string;
+  epicKey: string | null;
   email: string;
   jql: string | null;
   reportEnabled: boolean;
@@ -23,16 +24,29 @@ export interface Project {
   } | null;
 }
 
-export interface ProjectInput {
+/**
+ * Registration payload for the simplified "paste an epic link" create flow.
+ * Omit both email and apiToken to reuse the remembered default Jira account.
+ */
+export interface EpicProjectCreateInput {
   name: string;
+  epicLink: string;
+  email?: string;
+  apiToken?: string;
+}
+
+/** Edit-mode payload — full field set, used by the project edit dialog. */
+export interface ProjectUpdateInput {
+  name?: string;
   colorTag?: string | null;
-  siteUrl: string;
-  projectKey: string;
-  email: string;
-  /** Required on create; on update, omit or leave empty to keep the stored token. */
+  siteUrl?: string;
+  projectKey?: string;
+  email?: string;
+  /** Leave empty/omit to keep the stored token. */
   apiToken?: string;
   jql?: string | null;
-  reportEnabled: boolean;
-  reportFrequency: ReportFrequency;
+  isActive?: boolean;
+  reportEnabled?: boolean;
+  reportFrequency?: ReportFrequency;
   teamsWebhookUrl?: string | null;
 }
