@@ -121,10 +121,10 @@ export default function DashboardPage() {
             />
             <StatTile
               label="신규"
-              value={data.kpis.newCount}
+              value={data.kpis.newTodayCount}
               icon={ListPlus}
               tint="blue"
-              hint={`전 ${PERIOD_LABEL[period]} 대비 신규 등록`}
+              hint="오늘 등록된 이슈"
             />
             <StatTile
               label="완료"

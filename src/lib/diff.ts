@@ -11,7 +11,7 @@ const PERIOD_MS: Record<Period, number> = {
 };
 
 const EMPTY_DASHBOARD_DATA: DashboardData = {
-  kpis: { newCount: 0, doneCount: 0, statusChangedCount: 0, overdueCount: 0 },
+  kpis: { newCount: 0, newTodayCount: 0, doneCount: 0, statusChangedCount: 0, overdueCount: 0 },
   statusDistribution: [],
   trend: [],
   changes: [],
@@ -45,13 +45,18 @@ function isOverdue(issue: IssueSnapshot, now: Date): boolean {
   return !isDone(issue) && issue.dueDate !== null && issue.dueDate < now;
 }
 
-function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues | null, periodStart: Date) {
+function computeChanges(
+  latest: SnapshotWithIssues,
+  baseline: SnapshotWithIssues | null,
+  periodStart: Date,
+  todayStart: Date,
+) {
   const baselineByKey = new Map(baseline?.issues.map((issue) => [issue.issueKey, issue]) ?? []);
   const now = new Date();
 
   const changes: IssueChange[] = [];
   const allIssues: IssueListItem[] = [];
-  const kpis = { newCount: 0, doneCount: 0, statusChangedCount: 0, overdueCount: 0 };
+  const kpis = { newCount: 0, newTodayCount: 0, doneCount: 0, statusChangedCount: 0, overdueCount: 0 };
 
   for (const issue of latest.issues) {
     const before = baselineByKey.get(issue.issueKey);
@@ -64,7 +69,12 @@ function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues
     const createdWithinPeriod = issue.jiraCreatedAt >= periodStart;
     if (createdWithinPeriod) kpis.newCount++;
 
-    let isStatusChanged = false;
+    // The "신규" KPI card and issue-list tab always mean "created today" —
+    // fixed to the last 24h regardless of which day/week/month period tab is
+    // selected elsewhere on the dashboard.
+    const createdToday = issue.jiraCreatedAt >= todayStart;
+    if (createdToday) kpis.newTodayCount++;
+
     let fromStatus: string | undefined;
     let fromStatusCategory: string | undefined;
 
@@ -86,7 +96,6 @@ function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues
         kpis.doneCount++;
       } else {
         kpis.statusChangedCount++;
-        isStatusChanged = true;
       }
       fromStatus = before.status;
       fromStatusCategory = before.statusCategory;
@@ -124,8 +133,7 @@ function computeChanges(latest: SnapshotWithIssues, baseline: SnapshotWithIssues
       fromStatusCategory,
       assignee: issue.assignee,
       dueDate: issue.dueDate?.toISOString() ?? null,
-      isNew: createdWithinPeriod,
-      isStatusChanged,
+      isNewToday: createdToday,
       isOverdue: overdue,
     });
   }
@@ -176,7 +184,8 @@ async function buildTrend(projectId: string, period: Period, latest: SnapshotWit
 
     const periodStart = new Date(snapshot.capturedAt.getTime() - stepMs);
     const stepBaseline = previousSnapshot ?? (await getSnapshotAtOrBefore(projectId, periodStart));
-    const { kpis } = computeChanges(snapshot, stepBaseline, periodStart);
+    // "오늘" isn't meaningful per trend step — pass periodStart as a no-op stand-in.
+    const { kpis } = computeChanges(snapshot, stepBaseline, periodStart, periodStart);
 
     const label = period === "month" ? `${at.getMonth() + 1}월` : `${at.getMonth() + 1}/${at.getDate()}`;
     points.push({
@@ -197,8 +206,9 @@ export async function getDashboardData(projectId: string, period: Period): Promi
 
   const baselineDate = new Date(latest.capturedAt.getTime() - PERIOD_MS[period]);
   const baseline = await getSnapshotAtOrBefore(projectId, baselineDate);
+  const todayStart = new Date(latest.capturedAt.getTime() - PERIOD_MS.day);
 
-  const { changes, allIssues, kpis } = computeChanges(latest, baseline, baselineDate);
+  const { changes, allIssues, kpis } = computeChanges(latest, baseline, baselineDate, todayStart);
 
   return {
     kpis,

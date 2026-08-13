@@ -21,8 +21,14 @@ const CATEGORY_COLOR_VAR: Record<string, string> = {
   done: "--status-good",
 };
 
+// Named-status overrides win over the category mapping above — "검수" reads
+// as its own workflow stage (review), not just another "작업 중" status.
+const STATUS_NAME_COLOR_VAR: Record<string, string> = {
+  검수: "--status-warning",
+};
+
 function colorVarFor(slice: StatusSlice): string {
-  return CATEGORY_COLOR_VAR[slice.statusCategory] ?? "--muted-foreground";
+  return STATUS_NAME_COLOR_VAR[slice.status] ?? CATEGORY_COLOR_VAR[slice.statusCategory] ?? "--muted-foreground";
 }
 
 function withColorVars(data: StatusSlice[]): (StatusSlice & { colorVar: string })[] {
